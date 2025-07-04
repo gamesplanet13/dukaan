@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dual Order Converter with Clean Thanks Msg</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body { font-family:sans-serif; text-align:center; padding:20px; background:#f9f9f9; }
+    h2 { color:#333; }
+    button { background:#28a745; color:white; border:none; padding:10px 20px; border-radius:5px; font-size:16px; cursor:pointer; margin:5px; }
+    button:hover { background:#218838; }
+    .output-block { margin-top:20px; white-space: pre-wrap; text-align:left; background:#fff; padding:10px; border-radius:5px; border:1px solid #ccc; }
+    a.whatsapp-btn { display:inline-block; background:#25D366; color:white; padding:10px 20px; text-decoration:none; border-radius:5px; font-size:16px; margin:5px; }
+    a.whatsapp-btn:hover { background:#1ebe57; }
+  </style>
+</head>
+<body>
+  <h2>📝 Upload Two Order Screenshots</h2>
+  <input type="file" id="imageInput1" accept="image/*" /><br><br>
+  <input type="file" id="imageInput2" accept="image/*" /><br><br>
+  <button id="processBtn">Generate Final Msg</button>
+  <div id="output"></div>
+
+<script>
+$("#processBtn").click(async function(){
+  const file1 = document.getElementById('imageInput1').files[0];
+  const file2 = document.getElementById('imageInput2').files[0];
+  if (!file1 || !file2) { alert("Please upload both images."); return; }
+
+  $("#output").html("⏳ Processing... Please wait.");
+
+  // Process second screenshot for alt mobile
+  let formData2 = new FormData();
+  formData2.append("apikey", "K83921575388957");
+  formData2.append("language", "eng");
+  formData2.append("isOverlayRequired", "false");
+  formData2.append("file", file2);
+
+  let response2 = await fetch("https://api.ocr.space/parse/image", { method: "POST", body: formData2 });
+  let result2 = await response2.json();
+  let text2 = result2.ParsedResults[0].ParsedText;
+  let altMobileMatch = text2.match(/Alternate\s*(Mobile)?\s*(Number|No)?\s*[:\-]?\s*(\d{10})/i);
+  let altMobile = altMobileMatch ? altMobileMatch[3] : "";
+
+  // Process first screenshot for all details
+  let formData1 = new FormData();
+  formData1.append("apikey", "K83921575388957");
+  formData1.append("language", "eng");
+  formData1.append("isOverlayRequired", "false");
+  formData1.append("file", file1);
+
+  let response1 = await fetch("https://api.ocr.space/parse/image", { method: "POST", body: formData1 });
+  let result1 = await response1.json();
+  let text1 = result1.ParsedResults[0].ParsedText;
+
+  let orderIdMatch = text1.match(/Order\s*(ID|#)?\s*[:\-]?\s*(\d{5,})/i);
+  let orderId = orderIdMatch ? orderIdMatch[2] : "NotFound";
+
+  let nameMatch = text1.match(/Name\s*([A-Za-z\s]+)/i);
+  let name = nameMatch ? nameMatch[1].trim() : "Customer";
+
+  let mobileMatch = text1.match(/(\+91[-\s]?\d{10}|\d{10})/);
+  let mobileRaw = mobileMatch ? mobileMatch[1].replace(/\D/g,'') : "0000000000";
+  let mobile = mobileRaw.slice(-10);
+
+  let emailMatch = text1.match(/Email\s*([\w\.\-]+@[\w\.\-]+)/i);
+  let email = emailMatch ? emailMatch[1] : "";
+
+  let addressRaw = "Address Not Found";
+  let pincode = "800001";
+  let state = "Bihar";
+  let city = "Patna";
+  let postoffice = city;
+  let landmark = "Dwarika High School";
+
+  let product = "PS2 FMCB for PS2 OPL 10th, ula unch";
+  let variant = "7XXXX";
+  let basePrice = "999";
+  let discount = "0";
+  let amountPaid = "999";
+
+  // Final structured msg
+  let finalMsg = `🟢 Prepaid Order on dukaan
+
+Order ID: ${orderId}
+Name: ${name}
+Mobile: ${mobile}
+Alt Mobile: ${altMobile}
+Email: ${email}
+
+Address: ${addressRaw}
+Landmark: ${landmark}
+Pincode: ${pincode}
+State: ${state}
+District/City: ${city}
+Post office: ${postoffice}
+
+Product: ${product}
+Variant: ${variant}
+Base Price: ${basePrice}
+Discount Applied: ${discount}
+Amount Paid: ${amountPaid}`;
+
+  // Full thanks msg with proper line breaks encoded by encodeURIComponent
+  let thanksMsg = `🌟 *GamesPlanet*
+🙏 Hello ${name} ji,
+Thank you for your order #${orderId}.
+🛒 Product: ${product}
+💰 Amount Paid: ₹${amountPaid}
+📦 Your order will be shipped soon between 8PM-10PM.
+🔗 Tracking will update on website after dispatch.
+🖼️ On request, we can send parcel pic & tracking number here on WhatsApp.
+💚 Team GamesPlanet`;
+
+  let thanksMsgEncoded = encodeURIComponent(thanksMsg);
+
+  $("#output").html(
+    `<div class="output-block">${finalMsg}</div>
+    <a href="https://wa.me/917983624797?text=${encodeURIComponent(finalMsg)}" target="_blank" class="whatsapp-btn">📲 Send Msg to My WhatsApp</a>
+    <a href="https://wa.me/91${mobile}?text=${thanksMsgEncoded}" target="_blank" class="whatsapp-btn">🙏 Send Full Thanks to Customer</a>`
+  );
+});
+</script>
+</body>
+</html>
