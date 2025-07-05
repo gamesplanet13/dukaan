@@ -111,14 +111,15 @@ function convert() {
   }
 
   let outputText = 
-`🌟 *GamesPlanet*
-🙏 Hello ${name} ji, thanks for your order ${orderId}.
-📦 Your product: ${productResult.join(", ")} ${variantResult}
-📍 Pincode: ${pincode}
-📏 Distance: ${distance} km
-⏳ Estimated delivery: ${eta}
-🔗 Tracking will update on website after dispatch.
-💚 *Team GamesPlanet*`;
+`🌟 GamesPlanet
+🙏 Hello ${name} ji, thank you for your order ${orderId}.
+📦 Product: ${productResult.join(", ")} ${variantResult}
+📍 Pincode: ${pincode} | 📏 Distance: ${distance} km
+⏳ Estimated Delivery: ${eta}
+🚚 Your order will be shipped soon between 8PM–10PM.
+🔗 Tracking will update on our website after dispatch.
+🖼️ On request, we can share the parcel photo & tracking number here on WhatsApp.
+💚 Team GamesPlanet`;
 
   document.getElementById("output").textContent = outputText;
 }
@@ -145,25 +146,41 @@ function sendToOwn() {
 }
 
 function sendThanks() {
-  let input = document.getElementById("input").value;
-  let nameMatch = input.match(/name\s*(.+)/i);
-  let name = nameMatch ? nameMatch[1].split('\n')[0].trim() : "Customer";
-  let orderMatch = input.match(/#\d{5,}/);
-  let orderId = orderMatch ? orderMatch[0] : "Not found";
-  let etaMatch = document.getElementById("output").textContent.match(/Estimated delivery: ([^\n]+)/);
-  let eta = etaMatch ? etaMatch[1] : "few days";
+  let output = document.getElementById("output").textContent;
+
+  let nameMatch = output.match(/Hello (.+) ji/i);
+  let name = nameMatch ? nameMatch[1] : "Customer";
+
+  let orderMatch = output.match(/order (#\d{5,})/i);
+  let orderId = orderMatch ? orderMatch[1] : "Not found";
+
+  let productMatch = output.match(/Product: ([^\n]+)/);
+  let product = productMatch ? productMatch[1].trim() : "";
+
+  let pincodeMatch = output.match(/Pincode: (\d{6})/);
+  let pincode = pincodeMatch ? pincodeMatch[1] : "";
+
+  let distanceMatch = output.match(/Distance: (\d+) km/);
+  let distance = distanceMatch ? distanceMatch[1] : "N/A";
+
+  let etaMatch = output.match(/Estimated Delivery: ([^\n]+)/i);
+  let eta = etaMatch ? etaMatch[1].trim() : "few days";
 
   let thanksMsg = encodeURIComponent(
-`🌟 *GamesPlanet*
-🙏 Hello ${name} ji, thanks for your order ${orderId}.
-📦 Your order will be shipped soon.
-⏳ Estimated delivery: ${eta}
-🔗 Tracking will update on website after dispatch.
-💚 *Team GamesPlanet*`
+`🌟 GamesPlanet
+🙏 Hello ${name} ji, thank you for your order ${orderId}.
+📦 Product: ${product}
+📍 Pincode: ${pincode} | 📏 Distance: ${distance} km
+⏳ Estimated Delivery: ${eta}
+🚚 Your order will be shipped soon between 8PM–10PM.
+🔗 Tracking will update on our website after dispatch.
+🖼️ On request, we can share the parcel photo & tracking number here on WhatsApp.
+💚 Team GamesPlanet`
   );
 
-  let mobileMatch = input.match(/\+91[-\s]?[0-9]{10}/);
-  let mobile = mobileMatch ? mobileMatch[0].replace(/\s|-/g,"") : "";
+  let inputText = document.getElementById("input").value;
+  let mobileMatchInput = inputText.match(/\+91[-\s]?[0-9]{10}/);
+  let mobile = mobileMatchInput ? mobileMatchInput[0].replace(/\s|-/g,"") : "";
   if(mobile) window.open(`https://wa.me/${mobile}?text=${thanksMsg}`, "_blank");
   else alert("Customer mobile number not found in input.");
 }
