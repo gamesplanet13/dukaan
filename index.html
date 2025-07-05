@@ -76,16 +76,19 @@ function convert() {
   let input = document.getElementById("input").value.toLowerCase();
   let productResult = [];
   let variantResult = "";
-  let nameMatch = input.match(/name\s*([\w\s]+)/i);
-  let name = nameMatch ? nameMatch[1].trim() : "Customer";
+
+  // Improved name extraction logic
+  let nameMatch = input.match(/name\s*(.+)/i);
+  let name = nameMatch ? nameMatch[1].split('\n')[0].trim() : "Customer";
+
   let orderMatch = input.match(/#\d{5,}/);
   let orderId = orderMatch ? orderMatch[0] : "Not found";
   let pincodeMatch = input.match(/\b\d{6}\b/);
   let pincode = pincodeMatch ? pincodeMatch[0] : "";
 
   // Compact product logic
-  compactNames.forEach(name => {
-    if (input.includes(name)) productResult.push(name.toUpperCase());
+  compactNames.forEach(nameItem => {
+    if (input.includes(nameItem)) productResult.push(nameItem.toUpperCase());
   });
 
   // Memory variant logic
@@ -143,8 +146,8 @@ function sendToOwn() {
 
 function sendThanks() {
   let input = document.getElementById("input").value;
-  let nameMatch = input.match(/name\s*([\w\s]+)/i);
-  let name = nameMatch ? nameMatch[1].trim() : "Customer";
+  let nameMatch = input.match(/name\s*(.+)/i);
+  let name = nameMatch ? nameMatch[1].split('\n')[0].trim() : "Customer";
   let orderMatch = input.match(/#\d{5,}/);
   let orderId = orderMatch ? orderMatch[0] : "Not found";
   let etaMatch = document.getElementById("output").textContent.match(/Estimated delivery: ([^\n]+)/);
