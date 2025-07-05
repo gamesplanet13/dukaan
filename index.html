@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Final Full Patched Converter</title>
+  <title>Final Prepaid Order + Thanks Converter with Distance</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     textarea { width: 100%; height: 250px; font-size: 14px; }
@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<h2>Prepaid Order + Thanks Converter (Final Full Patched)</h2>
+<h2>Prepaid Order + Thanks Converter (Final with Distance)</h2>
 
 <textarea id="input" placeholder="Paste order details here"></textarea><br><br>
 
@@ -27,18 +27,17 @@
 <pre id="output"></pre>
 
 <script>
-// Sample product list (expand as needed)
-const products = ["m33", "m22", "gd30", "gd30v2", "gd30v3", "g11pro", "g11pro special edition", "fmcb", "fmcb + usb top", "fmcb + usb optional", "m88", "m15pro", "pandora mini", "pandora pro", "gamestick lite", "gamestick pro", "gd35", "r35s", "r36s", "sd card", "gamestick gd10", "gamebox g10"];
+// Global pincode dataset
+let pincodeLatLng = {};
 
-// Sample states list
-const states = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu and Kashmir","Ladakh","Puducherry","Chandigarh","Andaman and Nicobar Islands","Lakshadweep","Dadra and Nagar Haveli and Daman and Diu"];
+// Load pincode data from JSON file
+fetch('pincode_data.json')
+  .then(response => response.json())
+  .then(data => { pincodeLatLng = data; })
+  .catch(error => console.log("Error loading pincode data:", error));
 
-// Sample pincode to lat/lng mapping
-const pincodeLatLng = {
-  "244901": { lat: 28.8, lng: 79.0, city: "Rampur", state: "Uttar Pradesh" }, // Rampur UP
-  "412101": { lat: 18.6, lng: 73.8, city: "Pune", state: "Maharashtra" }, // Pune MH
-  // Add full dataset here
-};
+// Product list
+const products = ["m33","m22","gd30","gd30v2","gd30v3","g11pro","g11pro special edition","fmcb","fmcb + usb top","fmcb + usb optional","m88","m15pro","pandora mini","pandora pro","gamestick lite","gamestick pro","gd35","r35s","r36s","sd card","gamestick gd10","gamebox g10"];
 
 function selectAll() {
   let input = document.getElementById("input");
@@ -99,23 +98,38 @@ function convert() {
   let pincodeMatch = input.match(/\b\d{6}\b/);
   let pincode = pincodeMatch ? pincodeMatch[0] : "";
 
-  let city = pincodeLatLng[pincode] ? pincodeLatLng[pincode].city : "";
-  let state = pincodeLatLng[pincode] ? pincodeLatLng[pincode].state : "";
+  let basePriceMatch = input.match(/1x\s*₹([\d,]+)/i);
+  let basePrice = basePriceMatch ? `₹${basePriceMatch[1]}` : "N/A";
 
-  // Calculate distance and ETA
+  let discountMatch = input.match(/Coupon discount.*-\₹(\d+)/i);
+  let discount = discountMatch ? `₹${discountMatch[1]}` : "0";
+
+  let paidMatch = input.match(/Total\s*PAID\s*₹([\d,]+)/i);
+  let amountPaid = paidMatch ? `₹${paidMatch[1]}` : "N/A";
+
+  // Detect product dynamically
+  let detectedProduct = "Unknown Product";
+  products.forEach(p => {
+    if (input.includes(p)) detectedProduct = p.toUpperCase();
+  });
+
+  let variant = "";
+  if (detectedProduct.includes("M88")) variant = "128GB";
+
+  let city = "Unknown";
+  let state = "Unknown";
   let distance = "N/A";
   let eta = "N/A";
-  if(pincodeLatLng["244901"] && pincodeLatLng[pincode]) {
-    distance = haversine(
-      pincodeLatLng["244901"].lat, pincodeLatLng["244901"].lng,
-      pincodeLatLng[pincode].lat, pincodeLatLng[pincode].lng
-    ).toFixed(0);
+
+  if (pincode in pincodeLatLng) {
+    let dest = pincodeLatLng[pincode];
+    city = dest.city;
+    state = dest.state;
+
+    // Calculate distance from Rampur UP (28.8,79.0)
+    distance = haversine(28.8,79.0,dest.lat,dest.lng).toFixed(0);
     eta = estimateDeliveryByDistance(distance);
   }
-
-  // Detect product
-  let detectedProduct = products.find(p => input.includes(p)) || "Unknown Product";
-  let variant = "128GB"; // default for M88, adjust as per your logic
 
   let outputText = 
 `🟢 Prepaid Order on Dukaan
@@ -131,8 +145,10 @@ Pincode: ${pincode}
 State: ${state}
 District/City: ${city}
 
-Product: ${detectedProduct.toUpperCase()}
-Variant: ${variant}
+${detectedProduct} ${variant}
+Base Price: ${basePrice}
+Discount Applied: ${discount}
+Amount Paid: ${amountPaid}
 Distance: ${distance} km
 Estimated Delivery: ${eta}`;
 
@@ -169,12 +185,6 @@ function sendThanks() {
   let orderMatch = output.match(/Order ID: ([^\n]+)/);
   let orderId = orderMatch ? orderMatch[1] : "Not found";
 
-  let productMatch = output.match(/Product: ([^\n]+)/);
-  let product = productMatch ? productMatch[1].trim() : "";
-
-  let variantMatch = output.match(/Variant: ([^\n]+)/);
-  let variant = variantMatch ? variantMatch[1].trim() : "";
-
   let pincodeMatch = output.match(/Pincode: ([^\n]+)/);
   let pincode = pincodeMatch ? pincodeMatch[1] : "";
 
@@ -183,6 +193,10 @@ function sendThanks() {
 
   let etaMatch = output.match(/Estimated Delivery: ([^\n]+)/);
   let eta = etaMatch ? etaMatch[1] : "few days";
+
+  let productLine = output.match(/([A-Z0-9 ]+)(128GB)?/);
+  let product = productLine ? productLine[1].trim() : "";
+  let variant = productLine && productLine[2] ? productLine[2].trim() : "";
 
   let thanksMsg = encodeURIComponent(
 `🌟 GamesPlanet
