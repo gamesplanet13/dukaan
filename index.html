@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Prepaid Order Converter with Thanks</title>
+  <title>Final Full Patched Converter</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     textarea { width: 100%; height: 250px; font-size: 14px; }
@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<h2>Prepaid Order on Dukaan Converter + Thanks</h2>
+<h2>Prepaid Order + Thanks Converter (Final Full Patched)</h2>
 
 <textarea id="input" placeholder="Paste order details here"></textarea><br><br>
 
@@ -27,6 +27,19 @@
 <pre id="output"></pre>
 
 <script>
+// Sample product list (expand as needed)
+const products = ["m33", "m22", "gd30", "gd30v2", "gd30v3", "g11pro", "g11pro special edition", "fmcb", "fmcb + usb top", "fmcb + usb optional", "m88", "m15pro", "pandora mini", "pandora pro", "gamestick lite", "gamestick pro", "gd35", "r35s", "r36s", "sd card", "gamestick gd10", "gamebox g10"];
+
+// Sample states list
+const states = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu and Kashmir","Ladakh","Puducherry","Chandigarh","Andaman and Nicobar Islands","Lakshadweep","Dadra and Nagar Haveli and Daman and Diu"];
+
+// Sample pincode to lat/lng mapping
+const pincodeLatLng = {
+  "244901": { lat: 28.8, lng: 79.0, city: "Rampur", state: "Uttar Pradesh" }, // Rampur UP
+  "412101": { lat: 18.6, lng: 73.8, city: "Pune", state: "Maharashtra" }, // Pune MH
+  // Add full dataset here
+};
+
 function selectAll() {
   let input = document.getElementById("input");
   input.focus();
@@ -38,46 +51,71 @@ function clearText() {
   document.getElementById("output").textContent = "";
 }
 
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2)*Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function estimateDeliveryByDistance(distance) {
+  if (distance <= 30) return "1 day";
+  else if (distance <= 60) return "1-2 days";
+  else if (distance <= 100) return "2-3 days";
+  else if (distance <= 200) return "3-4 days";
+  else if (distance <= 500) return "4-5 days";
+  else if (distance <= 1000) return "4-6 days";
+  else if (distance <= 1500) return "5–7 days";
+  else if (distance <= 2000) return "6–8 days";
+  else if (distance <= 3000) return "6–10 days";
+  else return "8–12 days (sometimes up to 15 days)";
+}
+
 function convert() {
-  let input = document.getElementById("input").value;
+  let input = document.getElementById("input").value.toLowerCase();
 
   let orderMatch = input.match(/#\d{5,}/);
   let orderId = orderMatch ? orderMatch[0] : "Not found";
 
-  let nameMatch = input.match(/Name\s*\n([^\n]+)/i);
+  let nameMatch = input.match(/name\s*\n([^\n]+)/i);
   let name = nameMatch ? nameMatch[1].trim() : "Customer";
 
-  let mobileMatch = input.match(/Mobile\s*\n([^\n]+)/i);
+  let mobileMatch = input.match(/mobile\s*\n([^\n]+)/i);
   let mobile = mobileMatch ? mobileMatch[1].trim() : "";
 
-  let altMobileMatch = input.match(/Alternate Mobile Number\s*\n([^\n]+)/i);
+  let altMobileMatch = input.match(/alternate mobile number\s*\n([^\n]+)/i);
   let altMobile = altMobileMatch ? altMobileMatch[1].trim() : "";
 
-  let emailMatch = input.match(/Email\s*\n([^\n]+)/i);
+  let emailMatch = input.match(/email\s*\n([^\n]+)/i);
   let email = emailMatch ? emailMatch[1].trim() : "";
 
-  let addressMatch = input.match(/Shipping address\s*\n([^\n]+)/i);
+  let addressMatch = input.match(/shipping address\s*\n([^\n]+)/i);
   let address = addressMatch ? addressMatch[1].trim() : "";
 
   let pincodeMatch = input.match(/\b\d{6}\b/);
   let pincode = pincodeMatch ? pincodeMatch[0] : "";
 
-  let stateMatch = input.match(/([A-Za-z\s]+)\s*\d{6}/);
-  let state = stateMatch ? stateMatch[1].trim() : "";
+  let city = pincodeLatLng[pincode] ? pincodeLatLng[pincode].city : "";
+  let state = pincodeLatLng[pincode] ? pincodeLatLng[pincode].state : "";
 
-  let productMatch = input.match(/GPZ M88 GAMESTICK/);
-  let product = productMatch ? "M88" : "Unknown Product";
+  // Calculate distance and ETA
+  let distance = "N/A";
+  let eta = "N/A";
+  if(pincodeLatLng["244901"] && pincodeLatLng[pincode]) {
+    distance = haversine(
+      pincodeLatLng["244901"].lat, pincodeLatLng["244901"].lng,
+      pincodeLatLng[pincode].lat, pincodeLatLng[pincode].lng
+    ).toFixed(0);
+    eta = estimateDeliveryByDistance(distance);
+  }
 
-  let variant = "128GB"; // Default for M88
-
-  let basePriceMatch = input.match(/1x\s*₹([\d,]+)/i);
-  let basePrice = basePriceMatch ? `₹${basePriceMatch[1]}` : "N/A";
-
-  let discountMatch = input.match(/Coupon discount.*-\₹(\d+)/i);
-  let discount = discountMatch ? `₹${discountMatch[1]}` : "0";
-
-  let paidMatch = input.match(/Total\s*PAID\s*₹([\d,]+)/i);
-  let amountPaid = paidMatch ? `₹${paidMatch[1]}` : "N/A";
+  // Detect product
+  let detectedProduct = products.find(p => input.includes(p)) || "Unknown Product";
+  let variant = "128GB"; // default for M88, adjust as per your logic
 
   let outputText = 
 `🟢 Prepaid Order on Dukaan
@@ -89,17 +127,14 @@ Alt Mobile: ${altMobile}
 Email: ${email}
 
 Address: ${address}
-Landmark: (Not provided)
 Pincode: ${pincode}
 State: ${state}
-District/City: (to extract if needed)
-Post office: (to extract if needed)
+District/City: ${city}
 
-Product: ${product}
+Product: ${detectedProduct.toUpperCase()}
 Variant: ${variant}
-Base Price: ${basePrice}
-Discount Applied: ${discount}
-Amount Paid: ${amountPaid}`;
+Distance: ${distance} km
+Estimated Delivery: ${eta}`;
 
   document.getElementById("output").textContent = outputText;
 }
@@ -137,14 +172,24 @@ function sendThanks() {
   let productMatch = output.match(/Product: ([^\n]+)/);
   let product = productMatch ? productMatch[1].trim() : "";
 
+  let variantMatch = output.match(/Variant: ([^\n]+)/);
+  let variant = variantMatch ? variantMatch[1].trim() : "";
+
   let pincodeMatch = output.match(/Pincode: ([^\n]+)/);
   let pincode = pincodeMatch ? pincodeMatch[1] : "";
+
+  let distanceMatch = output.match(/Distance: ([^\n]+)/);
+  let distance = distanceMatch ? distanceMatch[1] : "";
+
+  let etaMatch = output.match(/Estimated Delivery: ([^\n]+)/);
+  let eta = etaMatch ? etaMatch[1] : "few days";
 
   let thanksMsg = encodeURIComponent(
 `🌟 GamesPlanet
 🙏 Hello ${name} ji, thank you for your order ${orderId}.
-📦 Product: ${product}
-📍 Pincode: ${pincode}
+📦 Product: ${product} ${variant}
+📍 Pincode: ${pincode} | 📏 Distance: ${distance}
+⏳ Estimated Delivery: ${eta}
 🚚 Your order will be shipped soon between 8PM–10PM.
 🔗 Tracking will update on our website after dispatch.
 🖼️ On request, we can share the parcel photo & tracking number here on WhatsApp.
