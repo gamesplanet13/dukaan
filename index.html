@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Final Prepaid Order + Thanks Converter with Distance</title>
+  <title>Final Prepaid Order + Thanks Converter</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     textarea { width: 100%; height: 250px; font-size: 14px; }
@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<h2>Prepaid Order + Thanks Converter (Final with Distance)</h2>
+<h2>Prepaid Order + Thanks Converter (Final Patched)</h2>
 
 <textarea id="input" placeholder="Paste order details here"></textarea><br><br>
 
@@ -27,17 +27,14 @@
 <pre id="output"></pre>
 
 <script>
-// Global pincode dataset
-let pincodeLatLng = {};
+// Products array
+const products = ["m33","m22","gd30","gd30v2","gd30v3","g11pro","g11pro special edition","fmcb","fmcb + usb top","fmcb + usb optional","m88","m15pro","pandora mini","pandora pro","gamestick lite","gamestick pro","gd35","r35s","r36s","sd card","gamestick gd10","gamebox g10"];
 
-// Load pincode data from JSON file
+let pincodeLatLng = {};
 fetch('pincode_data.json')
   .then(response => response.json())
   .then(data => { pincodeLatLng = data; })
   .catch(error => console.log("Error loading pincode data:", error));
-
-// Product list
-const products = ["m33","m22","gd30","gd30v2","gd30v3","g11pro","g11pro special edition","fmcb","fmcb + usb top","fmcb + usb optional","m88","m15pro","pandora mini","pandora pro","gamestick lite","gamestick pro","gd35","r35s","r36s","sd card","gamestick gd10","gamebox g10"];
 
 function selectAll() {
   let input = document.getElementById("input");
@@ -107,11 +104,15 @@ function convert() {
   let paidMatch = input.match(/Total\s*PAID\s*₹([\d,]+)/i);
   let amountPaid = paidMatch ? `₹${paidMatch[1]}` : "N/A";
 
-  // Detect product dynamically
+  // Detect product dynamically (longest match first)
+  products.sort((a,b) => b.length - a.length);
   let detectedProduct = "Unknown Product";
-  products.forEach(p => {
-    if (input.includes(p)) detectedProduct = p.toUpperCase();
-  });
+  for (let p of products) {
+    if (input.includes(p)) {
+      detectedProduct = p.toUpperCase();
+      break;
+    }
+  }
 
   let variant = "";
   if (detectedProduct.includes("M88")) variant = "128GB";
@@ -126,7 +127,6 @@ function convert() {
     city = dest.city;
     state = dest.state;
 
-    // Calculate distance from Rampur UP (28.8,79.0)
     distance = haversine(28.8,79.0,dest.lat,dest.lng).toFixed(0);
     eta = estimateDeliveryByDistance(distance);
   }
@@ -144,8 +144,9 @@ Address: ${address}
 Pincode: ${pincode}
 State: ${state}
 District/City: ${city}
+Post office: ${city}
 
-${detectedProduct} ${variant}
+Product: ${detectedProduct} ${variant}
 Base Price: ${basePrice}
 Discount Applied: ${discount}
 Amount Paid: ${amountPaid}
@@ -194,14 +195,13 @@ function sendThanks() {
   let etaMatch = output.match(/Estimated Delivery: ([^\n]+)/);
   let eta = etaMatch ? etaMatch[1] : "few days";
 
-  let productLine = output.match(/([A-Z0-9 ]+)(128GB)?/);
+  let productLine = output.match(/Product: ([^\n]+)/);
   let product = productLine ? productLine[1].trim() : "";
-  let variant = productLine && productLine[2] ? productLine[2].trim() : "";
 
   let thanksMsg = encodeURIComponent(
 `🌟 GamesPlanet
 🙏 Hello ${name} ji, thank you for your order ${orderId}.
-📦 Product: ${product} ${variant}
+📦 Product: ${product}
 📍 Pincode: ${pincode} | 📏 Distance: ${distance}
 ⏳ Estimated Delivery: ${eta}
 🚚 Your order will be shipped soon between 8PM–10PM.
